@@ -4,4 +4,20 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fastroc"
-version = "1.0.5"
+version = "1.0.7"
+authors = [
+    { name = "John Ellis", email="12johnellis@gmail.com" }
+]
+description = "Quickly computes the ROC AUC score of a model"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: C",
+    "Operating System :: POSIX",
+    "License :: OSI Approved :: MIT License"
+]
+keywords = ["roc", "ROC", "reciever operating characteristic"]
+[project.urls]
+Homepage = "https://github.com/brightlego/fastroc"
+Issues = "https://github.com/brightlego/fastroc/issues"
+Repostiory = "https://github.com/brightlego/fastroc.git"
