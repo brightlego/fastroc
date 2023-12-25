@@ -192,7 +192,8 @@ calculate_roc(char *y_true, double *y_score, double *roc_auc,
 
 // the public function that can be accessed in python
 static PyObject * // The numpy array that is returned
-fastroc_calc_roc_auc(PyObject *args,     // The arguments to the function
+fastroc_calc_roc_auc(PyObject *self,     // This is not needed
+                     PyObject *args,     // The arguments to the function
                      PyObject *kwargs) { // The keyword arguments to that funciton
     npy_intp dim0, dim1, dim2; // The (adjusted) dimensions of the array
 
@@ -233,16 +234,16 @@ fastroc_calc_roc_auc(PyObject *args,     // The arguments to the function
 
     // Make sure y_true is an array of bools
     if (!PyArray_ISBOOL(y_true_arr)) {
-        PyErr_Clear();
-        PyErr_SetString(PyExc_TypeError, "y_true must be an array of booleans");
-        return NULL;
+        PyObject *tmp = PyArray_Cast(y_true_arr, NPY_BOOL);
+        Py_DECREF(y_true_arr);
+        y_true_arr = PyArray_GETCONTIGUOUS((PyArrayObject*) tmp);
     }
 
     // Make sure y_score is an array of floats
     if (!(PyArray_ISFLOAT(y_score_arr) && PyArray_ITEMSIZE(y_score_arr) == 8)) {
-        PyErr_Clear();
-        PyErr_SetString(PyExc_TypeError, "y_score must be an array of floats (float64)");
-        return NULL;
+        PyObject *tmp = PyArray_Cast(y_score_arr, NPY_FLOAT64);
+        Py_DECREF(y_score_arr);
+        y_score_arr = PyArray_GETCONTIGUOUS((PyArrayObject*) tmp);
     }
 
     // Make sure y_true and y_score have the same number of dimensions

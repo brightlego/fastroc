@@ -1,5 +1,0 @@
-# ninja log v5
-0	23	1693067254259364923	CMakeFiles/fastroc.dir/main.c.o	f5e74e0792e12ca8
-0	26	1693126811819043564	build.ninja	7071cf33a8ee135
-41	67	1693084851425476212	fastroc	b2a60024f5df0456
-0	41	1693084851401476258	CMakeFiles/fastroc.dir/fastrocmodule.c.o	e70217db7fe276ad

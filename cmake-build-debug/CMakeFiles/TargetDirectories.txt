@@ -1,3 +1,0 @@
-/home/john/CLionProjects/fastroc/cmake-build-debug/CMakeFiles/fastroc.dir
-/home/john/CLionProjects/fastroc/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/john/CLionProjects/fastroc/cmake-build-debug/CMakeFiles/rebuild_cache.dir

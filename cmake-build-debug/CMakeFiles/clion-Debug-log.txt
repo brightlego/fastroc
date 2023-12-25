@@ -1,4 +1,1 @@
-/home/john/.local/share/JetBrains/Toolbox/apps/clion/bin/cmake/linux/x64/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/home/john/.local/share/JetBrains/Toolbox/apps/clion/bin/ninja/linux/x64/ninja -DCMAKE_CXX_COMPILER=/home/john/install/gcc-12/bin/g++ -G Ninja -S /home/john/CLionProjects/fastroc -B /home/john/CLionProjects/fastroc/cmake-build-debug
--- Configuring done (0.0s)
--- Generating done (0.0s)
--- Build files have been written to: /home/john/CLionProjects/fastroc/cmake-build-debug
+CMakeLists.txt not found in /home/john/CLionProjects/fastroc Select CMakeLists.txt
