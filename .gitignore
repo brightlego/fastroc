@@ -1,0 +1,6 @@
+.idea/*
+dist/*
+cmake-build-debug/*
+fastroc.egg-info/*
+build/*
+*.egg-info
