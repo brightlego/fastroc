@@ -1,27 +1,7 @@
 #define PY_SSIZE_T_CLEAN
 
-#ifdef __has_include
-    #if __has_include(<Python.h>)
-            #include <Python.h>
-    #else
-        #include <python3.8/Python.h>
-    #endif
-#else
-    #include <python3.8/Python.h>
-#endif
-
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-#ifdef __has_include
-    #if __has_include(<numpy/arrayobject.h>)
-        #include <numpy/arrayobject.h>
-    #else
-        #include </home/john/.local/lib/python3.8/site-packages/numpy/core\
-/include/numpy/arrayobject.h>
-    #endif
-#else
-    #include </home/john/.local/lib/python3.8/site-packages/numpy/core/include\
-/numpy/arrayobject.h>
-#endif
+#include <Python.h>
+#include <numpy/arrayobject.h>
 
 #ifdef __has_include
     #if __has_include(<pthread.h>)
@@ -160,7 +140,7 @@ calculate_roc(char *y_true, double *y_score, double *roc_auc,
 #else
         if (thread_count != 1) {
             // Warn the user if they try to use multithreading but there is only a single thread
-            PyErr_WarnEx(PyExc_RuntimeWarning, "Only using single thread as pthread not found.\n", 1);
+            PyErr_WarnEx(PyExc_RuntimeWarning, "Only using single thread as pthread not found.", 1);
         }
 #endif
         // Put the arguments into a struct and call roc_thread with that
