@@ -190,60 +190,6 @@ calculate_roc(char *y_true, double *y_score, double *roc_auc,
     return 0; // Return 0 (successfully completed)
 }
 
-/*
-
-// Code for testing in C to allow debugger usage
-
-int test(int print_results, double y_score_accuracy, int integral_precision) {
-    srand(1);
-    npy_intp dim0 = 30;
-    npy_intp dim1 = 40;
-    npy_intp dim2 = 36;
-    char *y_true = malloc(sizeof(char) * dim0*dim1*dim2);
-    double *y_score = malloc(sizeof(double) * dim0*dim1*dim2);
-    double *roc_auc = malloc(sizeof(double) * dim0*dim2);
-    int i, j, k;
-    printf("Got here!\n");
-    for (i = 0; i < dim0; i++) {
-        for (j = 0; j < dim1; j++) {
-            for (k = 0; k < dim2; k++) {
-                double p = ((double) rand()) / RAND_MAX;
-                y_true[i*dim1*dim2 + j*dim2 + k] = p < 0.2 ? 1 : 0;
-                y_score[i*dim1*dim2 + j*dim2 + k] =
-                        (p < 0.2 ? y_score_accuracy / 10 : 0)
-                        + ((double) rand()) / RAND_MAX / 10;
-            }
-        }
-    }
-    struct timespec start, stop;
-    clock_gettime(CLOCK_REALTIME, &start);
-    calculate_roc(y_true, y_score, roc_auc, dim0, dim1, dim2,
-                  integral_precision, 1);
-    clock_gettime(CLOCK_REALTIME, &stop);
-    long int nsec = (stop.tv_sec - start.tv_sec)*1000000000
-                  + (stop.tv_nsec - start.tv_nsec);
-    printf("Time taken: %fms\n", nsec/1000000.0);
-    if (print_results) {
-        for (i = 0; i < dim0*dim2; i++) {
-            printf("%f ", roc_auc[i]);
-        }
-        printf("\n");
-    }
-    free(y_true);
-    free(y_score);
-    free(roc_auc);
-    return 0;
-}
-
-int main() {
-    test(1, 0.5, 25);
-    test(1, 0.5, 50);
-    test(1, 0.5, 100);
-
-    return 0;
-}
-*/
-
 // the public function that can be accessed in python
 static PyObject * // The numpy array that is returned
 fastroc_calc_roc_auc(PyObject *args,     // The arguments to the function
