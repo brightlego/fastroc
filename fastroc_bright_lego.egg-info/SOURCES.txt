@@ -1,8 +1,0 @@
-README.md
-fastrocmodule.c
-pyproject.toml
-setup.py
-fastroc_bright_lego.egg-info/PKG-INFO
-fastroc_bright_lego.egg-info/SOURCES.txt
-fastroc_bright_lego.egg-info/dependency_links.txt
-fastroc_bright_lego.egg-info/top_level.txt
