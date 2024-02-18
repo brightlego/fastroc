@@ -2,6 +2,7 @@
 
 #include <Python.h>
 #include <numpy/arrayobject.h>
+#include <stdlib.h>
 
 #ifdef __has_include
     #if __has_include(<pthread.h>)
@@ -127,6 +128,102 @@ roc_thread(void *voided_args)
     return NULL;
 }
 
+
+/*
+ A y_true, y_score pair of values for use in sorting.
+ * */
+struct key_value_pair {
+    char value;
+    double key;
+};
+
+/*
+ For use in sorting y_true by y_score descending
+ */
+int
+compare(const void *a, const void *b) {
+    double k1 = ((struct key_value_pair *) a)->key;
+    double k2 = ((struct key_value_pair *) b)->key;
+    if (k1 < k2) {
+        return 1;
+    } else if (k1 == k2) {
+        return 0;
+    } else {
+        return -1;
+    }
+}
+
+/*
+ This function is called when integral_precision <= 0
+
+ Calculates the ROC AUC score exactly using the algorithm described below:
+ sorted_y_true = SORT y_true BY y_score DESC
+ tpc = 0
+ area = 0
+ FOR i IN 0 TO n-1
+   IF sorted_y_true[i] THEN
+     tpc += 1                        The curve is going from (x, y) to (x, y+1) and so the area contributed is 0
+   ELSE
+     area += tpc                     The curve is going from (x, y) to (x+1, y) and so the area contributed is y
+   ENDIF
+ ENDFOR
+ area /= tpc                         Scale the y-axis from counts to rates
+ area /= (n - tpc)                   Scale the x-axis from counts to rates
+
+ This algorithm uses the fact that the only important thresholds are the ones that just cross a datapoint in y_score.
+ So by sorting y_true by y_score we can discard the exact values of y_score and only look at how y_true changes.
+
+ For small arrays, this is faster than the imprecise algorithm, and also only runs in Θ(n log n) time. It has the
+ downside of being less space efficient, but less than a kilobyte of extra space if the axis to calculate over is
+ less than ~110 elements long.
+ */
+int
+roc_thread_exact(void *voided_args) {
+    struct Args args = * (struct Args *) voided_args; // Re-interpret the args as a pointer to an Args structure and dereference it
+    npy_intp combined_ik; // Iterating through values of i and k combined to make taking every thread_count'th easier
+    npy_intp i, j, k; // The indices of the array (i is dim1, j is dim2, k is dim3)
+
+    // The array to sort y_true into
+    struct key_value_pair* sorted_y_true = malloc((sizeof (struct key_value_pair)) * args.dim1);
+
+    for (combined_ik = args.offset; combined_ik < args.dim0 * args.dim2; combined_ik += args.thread_count) {
+        int tpc; // The True Positive Count
+
+        i = combined_ik / args.dim2;
+        k = combined_ik % args.dim2;
+
+        tpc = 0;
+
+        // load the data into the array to sort
+        for (j = 0; j < args.dim1; j++) {
+            sorted_y_true[j].value = args.y_true[get_index(i, j, k)];
+            sorted_y_true[j].key = args.y_score[get_index(i, j, k)];
+        }
+
+        // Sort y_true by y_score descending
+        qsort(sorted_y_true, args.dim1, (sizeof (struct key_value_pair)), compare);
+
+        // For each 'threshold'
+        for (j = 0; j < args.dim1; j++) {
+            // y is changing but x is constant
+            if (sorted_y_true[j].value) {
+                tpc++;
+            // x is changing but y is constant
+            } else {
+                args.roc_auc[combined_ik] += tpc;
+            }
+        }
+        // Convert from counts to rates
+        args.roc_auc[combined_ik] /= tpc;
+        args.roc_auc[combined_ik] /= args.dim1 - tpc;
+    }
+    // Make sure there are no memory leaks
+    free(sorted_y_true);
+
+    // return *something* to make pthreads happy
+    return NULL;
+}
+
 // Calculates the ROC AUC score for the given arrays. Takes roughly the same arguments as roc_thread
 int // returns the status code of the program (at the moment, always 0)
 calculate_roc(char *y_true, double *y_score, double *roc_auc,
@@ -145,7 +242,11 @@ calculate_roc(char *y_true, double *y_score, double *roc_auc,
 #endif
         // Put the arguments into a struct and call roc_thread with that
         struct Args args = { y_true, y_score, roc_auc, dim0, dim1, dim2, 0, integral_precision, 1 };
-        roc_thread((void *) &args);
+        if (integral_precision > 0) {
+            roc_thread((void *) &args);
+        } else {
+            roc_thread_exact((void *) &args);
+        }
 #ifdef MULTITHREADED
     } else {
         pthread_t threads[thread_count]; // An array to store all the threads
@@ -155,11 +256,17 @@ calculate_roc(char *y_true, double *y_score, double *roc_auc,
             // Set the i'th argument.
             args[i] = (struct Args) { y_true, y_score, roc_auc, dim0, dim1, dim2, i, integral_precision,
                                       thread_count };
-
-            pthread_create(threads + i, // &threads[i]
-                           NULL, // This is not needed
-                           roc_thread, // The function to start the thread from
-                           (void *) (args + i)); // &args[i]
+            if (integral_precision > 0) {
+                pthread_create(threads + i, // &threads[i]
+                               NULL, // This is not needed
+                               roc_thread, // The function to start the thread from
+                               (void *) (args + i)); // &args[i]
+            } else {
+                pthread_create(threads + i, // &threads[i]
+                               NULL, // This is not needed
+                               roc_thread_exact, // The function to start the thread from
+                               (void *) (args + i)); // &args[i]
+            }
         }
         // Now wait for all the threads to finish (and discard the return value)
         for (i = 0; i < thread_count; i++) {
@@ -180,7 +287,7 @@ fastroc_calc_roc_auc(PyObject *self,     // This is not needed
     PyObject *unvalidated_y_true_arr, *unvalidated_y_score_array; // The first two arguments
     PyArrayObject *y_true_arr, *y_score_arr; // The respective arrays
     int axis = -1; // The axis of -1 indicates to calculate over the final axis
-    int integral_precision = 50; // A precision of 50 indicates to take 50 steps. This typically gets it to 2-3 dp.
+    int integral_precision = 0; // A precision of 50 indicates to take 50 steps. This typically gets it to 2-3 dp.
     int thread_count = 1; // The number of threads to run
 
     // A NULL terminated array of keyword arguments
@@ -313,6 +420,8 @@ PyDoc_STRVAR(calc_roc_auc_doc,
  "thread_count is the number of extra threads used in calculation.\n"
  "If thread_count is 1 or pthreads is not found then no extra \n"
  "threads are created.\n\n"
+ "If integral precision <= 0, an exact algorithm is used instead. It is recommended to keep it 0 unless dealing with"
+ "very large arrays."
              );
 PyDoc_STRVAR(fastroc_doc, "Calculate the ROC AUC score very quickly using C");
 
